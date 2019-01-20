@@ -1,13 +1,24 @@
 #include <Wire.h>
-#include <SPI.h>
 #include <Adafruit_LSM9DS1.h>
 #include <Adafruit_Sensor.h>  // not used in this demo but required!
-#include <SPI.h>
 #include <nRF24L01.h>
-#include <RF24.h>
+#include <SPI.h>
 
+#include <NRFLite.h>
+#include <Adafruit_NeoPixel.h>
 
-RF24 radio(7, 8);
+NRFLite _radio;
+#define PIN 8
+  // Parameter 1 = number of pixels in strip
+// Parameter 2 = pin number (most are valid)
+// Parameter 3 = pixel type flags, add together as needed:
+//   NEO_KHZ800  800 KHz bitstream (most NeoPixel products w/WS2812 LEDs)
+//   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
+//   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
+//   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(1, PIN, NEO_GRB + NEO_KHZ800);
+
+//RF24 radio(10, 11); // CE, CSN
 
 const byte rxAddr[6] = "00001";
 
@@ -70,14 +81,20 @@ void setup()
   }
   Serial.println("Found LSM9DS1 9DOF");
 
+  strip.begin();
+  strip.setBrightness(64);
+  strip.show();
+
   // helper to just set the default scaling we want, see above!
   setupSensor();
 
-  radio.begin();
-  radio.setRetries(15, 15);
-  radio.openWritingPipe(rxAddr);
+
+   _radio.init(0, 10, 11); // Set transmitter radio to Id = 0, along with the CE and CSN pins
+  //radio.begin();
+ // radio.setRetries(15, 15);
+ // radio.openWritingPipe(rxAddr);
   
-  radio.stopListening();
+// radio.stopListening();
 }
 
 void loop() 
@@ -93,7 +110,11 @@ void loop()
   send_data.a = a.acceleration;
   send_data.g = g.gyro;
   
+   _radio.send(1, &send_data, sizeof(send_data)); // Send to the radio with Id = 1
+  //radio.write(&send_data, sizeof(send_data));
+  
+  strip.setPixelColor(0,(int)abs(a.acceleration.x)*25,(int)abs(a.acceleration.y)*25,(int)abs(a.acceleration.z)*25);
+  strip.show();
 
-  radio.write(&send_data, sizeof(send_data));
   delay(10);
 }
