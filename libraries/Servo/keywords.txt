@@ -1,23 +1,24 @@
 #######################################
+# Syntax Coloring Map Servo
+#######################################
+
+#######################################
 # Datatypes (KEYWORD1)
 #######################################
-SF	KEYWORD1
+
+Servo	KEYWORD1	Servo
 
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
-MadgwickUpdate	KEYWORD2
-MahonyUpdate	KEYWORD2
-deltatUpdate	KEYWORD2
-getPitch	KEYWORD2
-getYaw		KEYWORD2
-getRoll		KEYWORD2
-getRollRadians	KEYWORD2
-getPitchRadians	KEYWORD2
-getYawRadians	KEYWORD2
+attach	KEYWORD2
+detach	KEYWORD2
+write	KEYWORD2
+read	KEYWORD2
+attached	KEYWORD2
+writeMicroseconds	KEYWORD2
+readMicroseconds	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
 #######################################
-DEG_TO_RAD	LITERAL1
-RAD_TO_DEG	LITERAL1
