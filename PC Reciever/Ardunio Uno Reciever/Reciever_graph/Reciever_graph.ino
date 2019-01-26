@@ -10,9 +10,10 @@
 RF24 radio(7, 8);
 
 typedef struct data {
-  sensors_vec_t a, g;
+  float ax,ay,az,gx,gy,gz,ratio;
 };
-float acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z,mag_x,mag_y,mag_z;
+
+float acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z,mag_x,mag_y,mag_z,ratio;
 
 // Also declare plotter as global
 Plotter p;
@@ -38,6 +39,8 @@ void setup()
     p.SetColor(4,"green");
     p.AddTimeGraph( "Gyroscope Z", 1000, "d/s", gyro_z );
     p.SetColor(5,"blue");
+    p.AddTimeGraph( "Voltage Ratio", 1000, "ratio", ratio );
+    p.SetColor(6,"red");
 
 }
 
@@ -47,12 +50,13 @@ void loop()
   {
    struct data recieve_data;
    radio.read(&recieve_data, sizeof(recieve_data));
-   acc_x = recieve_data.a.x;
-   acc_y = recieve_data.a.y;
-   acc_z = recieve_data.a.z;
-   gyro_x = recieve_data.g.x;
-   gyro_y = recieve_data.g.y;
-   gyro_z = recieve_data.g.z;
+   acc_x = recieve_data.ax;
+   acc_y = recieve_data.ay;
+   acc_z = recieve_data.az;
+   gyro_x = recieve_data.gx;
+   gyro_y = recieve_data.gy;
+   gyro_z = recieve_data.gz;
+   ratio = recieve_data.ratio;
   }
 
     // Plot

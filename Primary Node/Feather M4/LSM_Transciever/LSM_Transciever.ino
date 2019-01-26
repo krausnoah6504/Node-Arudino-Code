@@ -16,10 +16,16 @@
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(1, PIN, NEO_GRB + NEO_KHZ800);
 
-RF24 radio(10, 11); // CE, CSN
+#define CSN_PIN 11
+#define CE_PIN 10
+RF24 radio(CE_PIN, CSN_PIN); // CE, CSN
+
+
 
 const byte rxAddr[6] = "00001";
-const byte node1Addr[6] = "00002";
+const byte Node1Addr[6] = "00002";
+
+
 float ratio = 0;
 
 // i2c
@@ -36,12 +42,11 @@ Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
 //Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1(LSM9DS1_XGCS, LSM9DS1_MCS);
 
 
-typedef struct data {
-  sensors_vec_t a, g;
-  float ratio;
+typedef struct send_data {
+  float ax,ay,az,gx,gy,gz,ratio;
 };
 
-typedef struct redata {
+typedef struct recieve_data {
   float ratio;
 };
 
@@ -70,10 +75,6 @@ void setupSensor()
 void setup() 
 {
   Serial.begin(115200);
-
-  while (!Serial) {
-    delay(1); // will pause Zero, Leonardo, etc until serial console opens
-  }
   
   Serial.println("Looking for the LSM9DS1.....");
   
@@ -91,65 +92,82 @@ void setup()
   strip.setBrightness(64);
   strip.show();
 
+  pinMode(13, OUTPUT);
+
   Serial.println("Setup NeoPixel");
 
 
   
   radio.begin();
+
+  radio.openWritingPipe(rxAddr);
+  radio.openReadingPipe(1, Node1Addr);
   radio.setRetries(15, 15);
+  radio.startListening();
 
   Serial.println("Finished setting up the RF chip.");
 }
 
 void loop() 
 {
-  lsm.read();  /* ask it to read in the data */ 
-  Serial.println("Read data");
+  lsm.read();  
   /* Get a new sensor event */ 
   sensors_event_t a, m, g, temp;
-
   lsm.getEvent(&a, &m, &g, &temp); 
 
-  struct data send_data;
-  send_data.a = a.acceleration;
-  send_data.g = g.gyro;
-  send_data.ratio = ratio;
-  
-  setupRFwrite(rxAddr);
-  radio.write(&send_data, sizeof(send_data));
+  struct send_data send_packet;
+  send_packet.ax = a.acceleration.x;
+  send_packet.ay = a.acceleration.y;
+  send_packet.az = a.acceleration.z;
+  send_packet.gx = g.gyro.x;
+  send_packet.gy = g.gyro.y;
+  send_packet.gz = g.gyro.z;
+  send_packet.ratio = ratio;
 
   
-  Serial.println("Wrote to radio channel");
+  sendPacket(send_packet);
+
+  //delay(10);
+  
   strip.setPixelColor(0,(int)abs(g.gyro.x),(int)abs(g.gyro.y),(int)abs(g.gyro.z));
   strip.show();
   
-  Serial.println("switching to read");
-  setupRFread(node1Addr);
-  Serial.println("switched to read");
+  struct recieve_data recieve_packet;
+  recieve_packet = recievePacket();
+  ratio = recieve_packet.ratio;
+
+}
+
+
+void sendPacket(struct send_data packet)
+{
+ bool rslt;
+ radio.stopListening();
+ rslt = radio.write(&packet, sizeof(packet));
+ radio.startListening();
+ //Serial.print("Data Sent ");
+ if (rslt) {
+  digitalWrite(13, HIGH);   // turn the LED on (HIGH is the voltage level)
+// Serial.println("  Acknowledge received");
+ } else {
+       //  Serial.println("  Tx failed");
+         digitalWrite(13, LOW);    // turn the LED off by making the voltage LOW
+        }
+        
+ }
+
+struct recieve_data recievePacket()
+ {
+ // Serial.println("Looking for Data...");
   if (radio.available())
   {
-   struct redata recieve_data;
-   radio.read(&recieve_data, sizeof(recieve_data));
+   struct recieve_data packet;
+   radio.read(&packet, sizeof(packet));
+  // Serial.print("Recieved packet! : ");
+ //  Serial.println(packet.ratio);
+   return packet;
+   
   }
-  Serial.println("switching back");
-
-
-  delay(10);
-  
-}
-
-
-void setupRFread(const byte Addr[6])
-{
-  radio.stopListening();
-  radio.openWritingPipe(Addr);
-  radio.stopListening();
-  
-
-}
-
-void setupRFwrite(const byte Addr[6])
-{
-  radio.openReadingPipe(0, Addr);
-  radio.startListening();
-}
+ }
+ 
+ 
